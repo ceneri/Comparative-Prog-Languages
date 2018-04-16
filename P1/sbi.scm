@@ -146,7 +146,7 @@
 (define (process-let stmt current-line)
     ;(printf "Inside let~n")
     (cond ((pair? (cadr stmt))            ;;array    (vector-set! vec pos v) → void?
-              (vector-set! (variable-get (caadr stmt)) (evaluate-expr (cadadr stmt)) (evaluate-expr (caddr stmt)) ) 
+              (vector-set! (variable-get (caadr stmt)) (index (evaluate-expr (cadadr stmt))) (evaluate-expr (caddr stmt)) ) 
           )
           (else
               (variable-put! (cadr stmt) (evaluate-expr (caddr stmt)) ) ;Need to handle array assignment as well and expression
@@ -156,6 +156,10 @@
     (+ current-line 1)
 )
 
+
+(define (index i)
+    (- i 1)
+)
 
 ;; 'goto'       (goto stop)
 (define (process-goto stmt current-line)
@@ -327,7 +331,7 @@
           ((is-variable? expr) 
               (evaluate-expr (variable-get expr)) )    ;return function from memory, false otherwise
           ((and (pair? expr) (is-variable? (car expr)))                
-              (vector-ref (variable-get (car expr)) (evaluate-expr (cadr expr) ) ) )    ;return array element
+              (vector-ref (variable-get (car expr)) (index (evaluate-expr (cadr expr) )) ) )    ;return array element
           ((and (pair? expr) (is-function? (car expr)))
               (apply (function-get (car expr)) (map evaluate-expr (cdr expr)) ))
           ;((string? expr) 
