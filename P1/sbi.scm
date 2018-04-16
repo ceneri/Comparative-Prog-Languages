@@ -47,7 +47,7 @@
     (map (lambda (line) (printf "~s~n" line)) program)
     (printf ")~n")
     (enter-labels program)
-    (process-lines program))
+    (interpret-program 1))
 
 
 
@@ -65,7 +65,6 @@
             (function-put! (car pair) (cadr pair)))
     `(
 
-        (mod     ,(lambda (x y) (- x (* (div x y) y))))
         (quot    ,(lambda (x y) (truncate (/ x y))))
         (rem     ,(lambda (x y) (- x (* (quot x y) y))))
         (+       ,+)
@@ -107,6 +106,13 @@
 (define (variable-put! key value)
         (hash-set! *variable-table* key value))
 
+;; HASH TABLES (Variable)
+(define *line-table* (make-hash))
+(define (line-get key)
+        (hash-ref *variable-table* key #f))
+(define (line-put! key value)
+        (hash-set! *variable-table* key value))
+
 ;; Initialize standard constants inside *variable-table*
 (for-each
     (lambda (pair)
@@ -121,55 +127,58 @@
 ;;--------------------------- STATEMENTS -------------------------------
 
 ;; 'dim'        (dim (a size))
-(define (process-dim stmt)
+(define (process-dim stmt current-line)
     ;(printf "Dim size: ~s~n" (cadadr stmt))
-    (variable-put! (caadr stmt) (make-vector (evaluate-expr (cadadr stmt) ) ) ) 
+    (variable-put! (caadr stmt) (make-vector (evaluate-expr (cadadr stmt) ) ) )
+    (+ current-line 1) 
 )
 
 ;; 'let'        (let size 100)
-(define (process-let stmt)
+(define (process-let stmt current-line)
     (variable-put! (cadr stmt) (evaluate-expr (caddr stmt)) ) ;Need to handle array assignment as well and expression
+    (+ current-line 1)
 )
 
 ;; 'goto'       (goto stop)
-(define (process-goto stmt)
-    (printf "Label: ~s~n" (cadr stmt))
+(define (process-goto stmt current-line)
+    ;(printf "Label: ~s~n" (cadr stmt))
     (if (is-label? (cadr stmt))
-        (printf "Jump: ~n")
-        (void)
+        (label-get (cadr stmt) )
+        (printf "Label ~s does not exist. ~n" (cadr stmt))  ;;!!Change to void on final
       )
     ;(display (label-get (car stmt) ) ) ;;this is the jumping needs work
 )
 
 ;; 'print'       (print "")   (print "2-2      = " (- 2 2))
-(define (process-print stmt)
+(define (process-print stmt current-line)
     ;(printf "Inside process print~n")
     
     ;Inner helper function
     (define (print-helper printable)
         (cond ((pair? printable)
-            (printf "~a" (evaluate-expr (car printable)))
+            (printf "~a " (evaluate-expr (car printable)))
             (print-helper (cdr printable)))
     ))
 
     (print-helper (cdr stmt))
     (printf "~n")
+    (+ current-line 1)
 )
 
 ;; 'input'       (input x)
-(define (process-input stmt)
-   (printf "Inside process input~n")
+(define (process-input stmt current-line)
+   ;(printf "Inside process input~n")
     (let ((x (read)))
       (unless (eof-object? x)
         (variable-put! (cadr stmt) x) ))
 
     (increment-inputcount)
-
+    (+ current-line 1)
 )
 
 
 (define (increment-inputcount)
-   (printf "Inside increment inputcount~n")
+   ;(printf "Inside increment inputcount~n")
     (if (variable-get 'inputcount)
         (variable-put! 'inputcount (+ (variable-get 'inputcount) 1))
         (variable-put! 'inputcount 1)
@@ -178,49 +187,51 @@
 
 
 ;; 'if'       (if (< max size) read))
-(define (process-if stmt)
+(define (process-if stmt current-line)
     (define operator (caadr stmt))
     (define operand1 (evaluate-expr (cadadr stmt)))                 ;need to evaluate expressions
     (define operand2 (evaluate-expr (car (cddadr stmt)) ))
-    (printf "Operand 1: ~s~n" (evaluate-expr operand1))
-    (printf "Operand 2: ~s~n" (evaluate-expr operand2))
+    (define label (caddr stmt)) 
+    ;(printf "Operand 1: ~s~n" (evaluate-expr operand1))
+    ;(printf "Operand 2: ~s~n" (evaluate-expr operand2))
     (cond ((eqv? operator '=)
               (if (eq? operand1 operand2)
-                  (printf "Jump: ~n")
-                  (void)
+                  (label-get label)
+                  (+ current-line 1)
               )
           )
           ((eqv? operator '<)
               (if (< operand1 operand2)
-                  (printf "Jump: ~n")
-                  (void)
+                  (label-get label)
+                  (+ current-line 1)
               )
           )
           ((eqv? operator '>)
               (if (> operand1 operand2)
-                  (printf "Jump: ~n")
-                  (void)
+                  (label-get label)
+                  (+ current-line 1)
               )
           )
           ((eqv? operator '<>)
               (if (not (eq? operand1 operand2) )
-                  (printf "Jump: ~n")
-                  (void)
+                  (label-get label)
+                  (+ current-line 1)
               )
           )
           ((eqv? operator '>=)
               (if (>= operand1 operand2) 
-                  (printf "Jump: ~n")
-                  (void)
+                  (label-get label)
+                  (+ current-line 1)
               )
           )
           ((eqv? operator '<=)
               (if (<= operand1 operand2) 
-                  (printf "Jump: ~n")
-                  (void)
+                  (label-get label)
+                  (+ current-line 1)
               )
           )
     )
+    
 )
               
 
@@ -249,7 +260,7 @@
 )
 
 (define (is-input? stmt)
-        (printf "Inside is input~n")
+        ;(printf "Inside is input~n")
         (eqv? (car stmt) 'input)
 )
 
@@ -266,6 +277,11 @@
 (define (is-function? func)
         ;(printf "lol==================================================~n")
         (function-get func)
+)
+
+(define (is-line? line)
+        ;(printf "lol==================================================~n")
+        (line-get line)
 )
 
 ;;-------------------------- EXPRESSIONS -------------------------------
@@ -293,13 +309,14 @@
 ;; Enter all labels to table (recursive)
 (define (enter-labels program)
     (define line (car program))
+    (line-put! (car line) line ) ;Enter line to hash
     (cond ((null? (cdr line))
               (void))
           ((pair? (cadr line))
               (void))
           (else 
-              (label-put! (cadr line) line)
-              (printf "Label Created ~s~n" (cadr line)) ))
+              (label-put! (cadr line) (car line)) ))
+              ;(printf "Label Created ~s to line ~s~n" (cadr line) (car line)) ))
 
     (if (not (null? (cdr program) ) ) 
         (enter-labels (cdr program) )
@@ -307,42 +324,65 @@
     )
 )
 
-
 ;;Process a statement
-(define (process-stmt stmt)
+(define (process-stmt stmt current-line)
     ;(printf "Statement Received: ~s~n" stmt)
-    (cond ((is-dim? stmt)(process-dim stmt)) 
-          ((is-let? stmt)(process-let stmt)) 
-          ((is-goto? stmt)(process-goto stmt))
-          ((is-print? stmt)(process-print stmt))
-          ((is-if? stmt)(process-if stmt))
-          ((is-input? stmt)(process-input stmt))
-          (else (do-nothing))
+    (cond ((is-dim? stmt)(process-dim stmt current-line)) 
+          ((is-let? stmt)(process-let stmt current-line)) 
+          ((is-goto? stmt)(process-goto stmt current-line))
+          ((is-print? stmt)(process-print stmt current-line))
+          ((is-if? stmt)(process-if stmt current-line))
+          ((is-input? stmt)(process-input stmt current-line))
+          (else (+ current-line 1))
     )
 )
 
 ;;Proccess every line (recursive)
-(define (process-lines program)
-    (define line (car program))
-    (cond ((null? (cdr line))
-              (void))
+;(define (process-lines program)
+;    (define line (car program))
+;    (cond ((null? (cdr line))
+;              (void))
+;          ((and (not (pair? (cadr line)) ) (null? (cddr line) ) )
+;              ;(printf "Skip this one: ~s~n" (cadr line))
+;              (void))
+;          ((and (not (pair? (cadr line)) ) (pair? (caddr line) ) )
+;              ;(printf "Line with label being processesed: ~s~n" (caddr line))
+;              (process-stmt (caddr line)))
+;          ((pair? (cadr line))      ;No label statement
+;              ;(printf "Line being processes: ~s~n" (cadr line))
+;              (process-stmt (cadr line)))
+;          (else                     ;Statement with a label
+;              (printf "Dont know this one: ~s~n" (line))
+;              (void)) )
+;
+;    (if (not (null? (cdr program) ) ) 
+;        (process-lines (cdr program) )
+;        (void)
+;    )
+;)
+
+;;Proccess every line (recursive)
+(define (interpret-program line-num)
+    (define line (line-get line-num))        
+    
+    (cond ((not line)
+              (exit))
+          ((null? (cdr line))
+              (set! line-num (+ line-num 1) ))
           ((and (not (pair? (cadr line)) ) (null? (cddr line) ) )
               ;(printf "Skip this one: ~s~n" (cadr line))
-              (void))
+               (set! line-num (+ line-num 1) ) )
           ((and (not (pair? (cadr line)) ) (pair? (caddr line) ) )
               ;(printf "Line with label being processesed: ~s~n" (caddr line))
-              (process-stmt (caddr line)))
+              (set! line-num (process-stmt (caddr line) line-num)) )
           ((pair? (cadr line))      ;No label statement
               ;(printf "Line being processes: ~s~n" (cadr line))
-              (process-stmt (cadr line)))
+              (set! line-num (process-stmt (cadr line) line-num)) )
           (else                     ;Statement with a label
               (printf "Dont know this one: ~s~n" (line))
               (void)) )
 
-    (if (not (null? (cdr program) ) ) 
-        (process-lines (cdr program) )
-        (void)
-    )
+    (interpret-program line-num)
 )
 
 
