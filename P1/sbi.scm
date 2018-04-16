@@ -135,6 +135,7 @@
 
 ;; 'let'        (let size 100)
 (define (process-let stmt current-line)
+    ;(printf "Inside let~n")
     (variable-put! (cadr stmt) (evaluate-expr (caddr stmt)) ) ;Need to handle array assignment as well and expression
     (+ current-line 1)
 )
@@ -165,15 +166,25 @@
     (+ current-line 1)
 )
 
-;; 'input'       (input x)
+;; 'input'       (input x)   (input a b c)
 (define (process-input stmt current-line)
-   ;(printf "Inside process input~n")
-    (let ((x (read)))
-      (unless (eof-object? x)
-        (variable-put! (cadr stmt) x) ))
-
-    (increment-inputcount)
+    ;(printf "Inside process input~n")
+    (input-helper stmt)
     (+ current-line 1)
+)
+
+(define (input-helper stmt)
+    ;(printf "Inside input helper~n")
+    (let ((x (read)))
+      (cond ((eof-object? x)
+                (variable-put! 'inputcount -1)
+            )
+            (else
+                (variable-put! (cadr stmt) x)
+                (increment-inputcount)
+            )
+      )
+    )
 )
 
 
@@ -195,7 +206,7 @@
     ;(printf "Operand 1: ~s~n" (evaluate-expr operand1))
     ;(printf "Operand 2: ~s~n" (evaluate-expr operand2))
     (cond ((eqv? operator '=)
-              (if (eq? operand1 operand2)
+              (if (= operand1 operand2)
                   (label-get label)
                   (+ current-line 1)
               )
@@ -213,7 +224,7 @@
               )
           )
           ((eqv? operator '<>)
-              (if (not (eq? operand1 operand2) )
+              (if (not (= operand1 operand2) )
                   (label-get label)
                   (+ current-line 1)
               )
@@ -382,6 +393,7 @@
               (printf "Dont know this one: ~s~n" (line))
               (void)) )
 
+    ;(printf "Here~n")
     (interpret-program line-num)
 )
 
