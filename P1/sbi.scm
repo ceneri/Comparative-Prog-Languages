@@ -1,4 +1,5 @@
 #!/afs/cats.ucsc.edu/courses/cmps112-wm/usr/racket/bin/mzscheme -qr
+;; Author: Cesar Neri       ID: 1513805      email:ceneri@ucsc.edu
 ;; $Id: sbi.scm,v 1.3 2016-09-23 18:23:20-07 - - $
 ;;
 ;; NAME
@@ -120,7 +121,7 @@
         
      ))
 
-;;--------------------------- HELPER METHODS -------------------------------
+;;--------------------------- HELPER METHODS --------------------------
 
 ;; Fixes index whjen working with arrays
 (define (index i)
@@ -130,6 +131,13 @@
 ;; For debugging purposes
 (define (do-nothing)
   (printf "NOTHING xD~n")
+)
+
+;; Error printing
+(define (throw-error msg stmt-num)
+  (error msg)
+  (error "Line: ~a" stmt-num)
+  (exit 1)
 )
 
 ;;---------------- BOOLEAN METHODS ---------------------------
@@ -178,7 +186,8 @@
 ;; 'dim'   ex:     (dim (a size))
 (define (process-dim stmt current-line)
     ;(printf "Dim size: ~s~n" (evaluate-expr (cadadr stmt) ))
-    (variable-put! (caadr stmt) (make-vector (evaluate-expr (cadadr stmt) ) ) )
+    (variable-put! (caadr stmt) 
+                    (make-vector (evaluate-expr (cadadr stmt) )))
     (+ current-line 1) 
 )
 
@@ -201,7 +210,7 @@
     ;(printf "Label: ~s~n" (cadr stmt))
     (if (is-label? (cadr stmt))
         (label-get (cadr stmt) )
-        (printf "Label ~s does not exist. ~n" (cadr stmt)) ) ;;!!change to error
+        (throw-error "Invalid label." current-line) ) 
 )
 
 ;; 'if'      ex: (if (< max size) read))
@@ -288,7 +297,7 @@
     )
 )
 
-;;-------------------------- EXPRESSIONS ------------------------------
+;;-------------------------- EXPRESSIONS -----------------------------
 
 ;; Evaluates a expresion
 (define (evaluate-expr expr) 
@@ -296,7 +305,7 @@
               expr)                    
           ((is-variable? expr)      ;return from memory
               (evaluate-expr (variable-get expr)) )   
-          ((and (pair? expr) (is-variable? (car expr)))  ;array element             
+          ((and (pair? expr) (is-variable? (car expr)))  ;array element
               (vector-ref (variable-get (car expr)) 
                           (index (evaluate-expr (cadr expr) )) ))    
           ((and (pair? expr) (is-function? (car expr)))  ;funct map
@@ -369,7 +378,7 @@
     
     ;Process current
     (cond ((not line)
-              (exit))
+              (exit 0))
           ((null? (cdr line))
               (set! line-num (+ line-num 1) ))
           ((and (not (pair? (cadr line)) ) (null? (cddr line) ) )
@@ -401,4 +410,3 @@
 (main (vector->list (current-command-line-arguments)))
 
 
-(error "Goodbye, World!")
