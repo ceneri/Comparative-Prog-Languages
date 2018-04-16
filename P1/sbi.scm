@@ -71,7 +71,7 @@
         (+       ,+)
         (*       ,*)
         (-       ,-)
-        (/       ,(lambda (x y) (floor (/ (exact->inexact (+ x)) (exact->inexact (+ y))))))
+        (/       ,(lambda (x y) (/ (+ x 0.0) (+ y 0.0))))
         (%       ,(lambda (x y) (- x (* (div x y) y))))
         (^       ,expt)
         (abs     ,abs)
@@ -82,7 +82,7 @@
         (cos     ,cos)
         (exp     ,exp)
         (floor   ,floor)
-        (log     ,log)
+        (log     , (lambda(x)(log (if (equal? x 0) 0.0 x))))
         (log10   ,(lambda (x) (/ (log x) (log 10.0))))
         (log2   ,(lambda (x) (/ (log x) (log 2.0))))
         (round   ,round)
@@ -122,7 +122,7 @@
 
 ;; 'dim'        (dim (a size))
 (define (process-dim stmt)
-    (printf "Dim size: ~s~n" (cadadr stmt))
+    ;(printf "Dim size: ~s~n" (cadadr stmt))
     (variable-put! (caadr stmt) (make-vector (evaluate-expr (cadadr stmt) ) ) ) 
 )
 
