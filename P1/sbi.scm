@@ -105,6 +105,8 @@
         (hash-ref *variable-table* key #f))
 (define (variable-put! key value)
         (hash-set! *variable-table* key value))
+(define (variable-remove! key )
+        (hash-remove! *variable-table* key))
 
 ;; HASH TABLES (Variable)
 (define *line-table* (make-hash))
@@ -169,7 +171,15 @@
 ;; 'input'       (input x)   (input a b c)
 (define (process-input stmt current-line)
     ;(printf "Inside process input~n")
-    (input-helper stmt)
+    (cond ((null? (cdr stmt)) 
+              (void)  
+          )
+          (else
+              (input-helper stmt)
+              (process-input (cdr stmt) current-line)
+          )
+    )
+
     (+ current-line 1)
 )
 
@@ -343,7 +353,11 @@
           ((is-goto? stmt)(process-goto stmt current-line))
           ((is-print? stmt)(process-print stmt current-line))
           ((is-if? stmt)(process-if stmt current-line))
-          ((is-input? stmt)(process-input stmt current-line))
+          ((is-input? stmt)
+                (if (variable-get 'inputcount)
+                    (variable-remove! 'inputcount)
+                    (void))
+                (process-input stmt current-line))
           (else (+ current-line 1))
     )
 )
