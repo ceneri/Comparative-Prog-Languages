@@ -130,17 +130,32 @@
 
 ;; 'dim'        (dim (a size))
 (define (process-dim stmt current-line)
-    ;(printf "Dim size: ~s~n" (cadadr stmt))
+    ;(printf "Dim size: ~s~n" (evaluate-expr (cadadr stmt) ))
     (variable-put! (caadr stmt) (make-vector (evaluate-expr (cadadr stmt) ) ) )
     (+ current-line 1) 
 )
 
 ;; 'let'        (let size 100)
+;(define (process-let stmt current-line)
+ ;   (printf "Inside let~n")
+  ;  (variable-put! (cadr stmt) (evaluate-expr (caddr stmt)) ) ;Need to handle array assignment as well and expression
+   ; (+ current-line 1)
+;)
+
+;; 'let'        (let size 100)    (let (a j) (a (+ j 1)))   (let (a max) x))
 (define (process-let stmt current-line)
     ;(printf "Inside let~n")
-    (variable-put! (cadr stmt) (evaluate-expr (caddr stmt)) ) ;Need to handle array assignment as well and expression
+    (cond ((pair? (cadr stmt))            ;;array    (vector-set! vec pos v) → void?
+              (vector-set! (variable-get (caadr stmt)) (evaluate-expr (cadadr stmt)) (evaluate-expr (caddr stmt)) ) 
+          )
+          (else
+              (variable-put! (cadr stmt) (evaluate-expr (caddr stmt)) ) ;Need to handle array assignment as well and expression
+          )
+    )
+    
     (+ current-line 1)
 )
+
 
 ;; 'goto'       (goto stop)
 (define (process-goto stmt current-line)
@@ -213,8 +228,8 @@
     (define operand1 (evaluate-expr (cadadr stmt)))                 ;need to evaluate expressions
     (define operand2 (evaluate-expr (car (cddadr stmt)) ))
     (define label (caddr stmt)) 
-    ;(printf "Operand 1: ~s~n" (evaluate-expr operand1))
-    ;(printf "Operand 2: ~s~n" (evaluate-expr operand2))
+    ;(printf "Operand 1: ~s~n" operand1)
+    ;(printf "Operand 2: ~s~n" operand2)
     (cond ((eqv? operator '=)
               (if (= operand1 operand2)
                   (label-get label)
