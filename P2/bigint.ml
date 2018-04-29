@@ -50,6 +50,16 @@ module Bigint = struct
         let taken, _ = fold_until (fun acc h -> h :: acc) [] (k - i + 1) list in
         List.rev taken;;
 
+    (*!! https://ocaml.org/learn/tutorials/99problems.html*)
+    let rec insert_at x n = function
+        | [] -> [x]
+        | h :: t as l -> if n = 0 then x :: l else h :: insert_at x (n-1) t;;
+
+
+    let rec timesTen list1 =
+        insert_at 0 0 list1
+
+
     let trimzeros list =
         let rec trimzeros' list' = match list' with
             | []          -> []
@@ -75,7 +85,6 @@ module Bigint = struct
             else if car list1 < car list2 then -1
             else compareTo' (cdr list1) (cdr list2)
         end
-
 
     (**Similar to Java method returns:
         -   1   if value1 > value2
@@ -140,6 +149,24 @@ module Bigint = struct
         end 
         | _, _, _  -> [0];;
 
+    let rec single_mul list1 digit carry = match (list1, digit, carry) with
+        | list1, 0, 0                       -> []
+        | [], digit, 0                      -> []
+        | [], digit, carry                  -> [carry]
+        | car1::cdr1, digit, carry          -> begin
+          let sum = (car1 * digit) + carry
+          in sum mod radix :: single_mul cdr1 digit (sum / radix)          
+        end;;
+
+    let rec mul' list1 list2  = match (list1, list2) with
+        | list1, []                 -> []
+        | [], list2                 -> []
+        | car1::cdr1, car2::cdr2    -> begin
+          let single = single_mul list1 car2 0
+          in let rem = timesTen list1
+          in add' single (mul' rem cdr2) 0
+        end;;
+
 
     let sub (Bigint (neg1, value1)) (Bigint (neg2, value2)) =
         if neg1 <> neg2     (* Addition *)
@@ -157,8 +184,12 @@ module Bigint = struct
         (* Should become substarction, sign is flipped, sub will flip it back*)
 
    
-
-    let mul = add
+    let mul (Bigint (neg1, value1)) (Bigint (neg2, value2)) =
+        if value1 = [] || value2 = []
+        then zero
+        else if neg1 = neg2
+        then Bigint (Pos, mul' value1 value2)
+        else Bigint (Neg, mul' value1 value2)
 
     let div = add
 
