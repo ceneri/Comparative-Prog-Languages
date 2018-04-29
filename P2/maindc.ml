@@ -6,10 +6,14 @@ include Bigint
 open Bigint
 open Printf
 open Scanner
+open Hashtbl
 
 type stack_t = Bigint.bigint Stack.t
 let push = Stack.push
 let pop = Stack.pop
+
+(*Hash table of register*)
+let registers = Hashtbl.create 256
 
 let ord thechar = int_of_char thechar
 type binop_t = bigint -> bigint -> bigint
@@ -20,10 +24,14 @@ let print_stackempty () = printf "dc: stack empty\n%!"
 
 let executereg (thestack: stack_t) (oper: char) (reg: int) =
     try match oper with
-        | 'l' -> printf "operator l reg 0%o is unimplemented\n%!" reg
-        | 's' -> printf "operator s reg 0%o is unimplemented\n%!" reg
+        | 'l' -> push (Hashtbl.find registers reg) thestack
+        | 's' -> Hashtbl.add registers reg (pop thestack)
         | _   -> printf "0%o 0%o is unimplemented\n%!" (ord oper) reg
-    with Stack.Empty -> print_stackempty()
+    with 
+        | Stack.Empty -> print_stackempty()
+        | Not_found -> printf "ocamldc: register '%c' (0%o) is empty\n%!"
+        (char_of_int reg) reg
+
 
 let executebinop (thestack: stack_t) (oper: binop_t) =
     try let right = pop thestack
