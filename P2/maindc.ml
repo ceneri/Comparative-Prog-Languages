@@ -63,7 +63,7 @@ let toploop (thestack: stack_t) inputchannel =
                  | Operator oper       -> execute thestack oper
                  );
              toploop ()
-        with End_of_file -> printf "End_of_file\n%!";
+        with End_of_file -> printf "";
     in  toploop ()
 
 let readfiles () =

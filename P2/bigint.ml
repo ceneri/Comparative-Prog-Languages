@@ -71,7 +71,7 @@ module Bigint = struct
                         | car, cdr'   ->  car::cdr'
         in trimzeros' list
 
-    (*Helper metyhods*)
+    (*Helper methods*)
 
     let flip_sign sign = match sign with
         | Pos -> Neg
@@ -167,14 +167,34 @@ module Bigint = struct
           in add' single (mul' rem cdr2) 0
         end;;
 
-    let rec div' list1 list2  = 
-        if cmp list1 list2 = 1
-        then let nxt = sub' list1 list2 false
-        in add' [1] (div' nxt list2 ) 0
-        else [] 
-        ;;
+    let double_val list = 
+        mul' list [2]
 
+    let rec div_and_rem' (dividend, divisor, pow2) =
+        if (cmp divisor dividend) = 1
+        then [0], dividend
+        else let quotient, remainder =
+                div_and_rem' (dividend, double_val divisor, double_val pow2)
+            in  if (cmp remainder divisor) = -1
+            then quotient, remainder
+            else (add' quotient pow2 0),
+                  (sub' remainder divisor false)
 
+    (*Returns tuple for both quotient and the remainder *)
+    let div_and_rem (dividend, divisor) = div_and_rem' (dividend, divisor, [1])
+
+    let div_helper value1 value2 =
+        let quotient, remainder = div_and_rem (value1, value2)
+        in quotient
+
+    (*Same as div_helper but raeturn remainder not quotient*)
+    let rem_helper value1 value2 =
+        let quotient, remainder = div_and_rem (value1, value2)
+        in remainder
+    
+    
+
+    
     let sub (Bigint (neg1, value1)) (Bigint (neg2, value2)) =
         if neg1 <> neg2     (* Addition *)
         then Bigint (neg1, add' value1 value2 0)
@@ -198,14 +218,23 @@ module Bigint = struct
         then Bigint (Pos, mul' value1 value2)
         else Bigint (Neg, mul' value1 value2)
 
-    let div = add (* (Bigint (neg1, value1)) (Bigint (neg2, value2)) =
-        if value1 = [] || value2 = []
+    let div (Bigint (neg1, value1)) (Bigint (neg2, value2)) =
+        if value1 = [] 
         then zero
+        else if value2 = []
+        then failwith "ocamldc: divide by zero"
         else if neg1 = neg2
-        then Bigint (Pos, div' value1 value2)
-        else Bigint (Neg, mul' value1 value2)  *)
+        then Bigint (Pos, div_helper value1 value2)
+        else Bigint (Neg, div_helper value1 value2) 
 
-    let rem = add
+    let rem (Bigint (neg1, value1)) (Bigint (neg2, value2)) =
+        if value1 = [] 
+        then zero
+        else if value2 = []
+        then failwith "ocamldc: remainder by zero"
+        else if neg1 = neg2
+        then Bigint (Pos, trimzeros( rem_helper value1 value2 ))
+        else Bigint (Neg, trimzeros( rem_helper value1 value2 ))
 
     let rec pow' value1 value2 counter = 
         if cmp value2 counter = -1 then [1]
@@ -213,8 +242,7 @@ module Bigint = struct
         else let curr = mul' value1 value1
         in let new_counter = add' counter [2] 0 
         in mul' curr (pow' value1 value2 new_counter)  
-        
-        
+              
 
     let pow (Bigint (neg1, value1)) (Bigint (neg2, value2)) =
         if value1 = [] || neg2 = Neg
@@ -224,6 +252,4 @@ module Bigint = struct
         else  Bigint (Pos, pow' value1 value2 [1] )     (* Counter starts at 0*)
 
     
-
 end
-
