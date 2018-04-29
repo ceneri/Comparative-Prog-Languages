@@ -29,8 +29,9 @@ let executereg (thestack: stack_t) (oper: char) (reg: int) =
         | _   -> printf "0%o 0%o is unimplemented\n%!" (ord oper) reg
     with 
         | Stack.Empty -> print_stackempty()
-        | Not_found -> printf "ocamldc: register '%c' (0%o) is empty\n%!"
-        (char_of_int reg) reg
+        | Not_found -> ( printf "ocamldc: register " ;
+            printf "'%c' (0%o) is empty\n%!" (if reg = 10 then ' ' 
+            else (char_of_int reg) )  reg )
 
 
 let executebinop (thestack: stack_t) (oper: binop_t) =
