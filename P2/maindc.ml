@@ -16,7 +16,7 @@ type binop_t = bigint -> bigint -> bigint
 
 let print_number number = printf "%s\n%!" (string_of_bigint number)
 
-let print_stackempty () = printf "stack empty\n%!"
+let print_stackempty () = printf "dc: stack empty\n%!"
 
 let executereg (thestack: stack_t) (oper: char) (reg: int) =
     try match oper with

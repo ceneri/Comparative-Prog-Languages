@@ -78,26 +78,26 @@ module Bigint = struct
         | Neg -> Pos
 
 
-    let rec compareTo' list1 list2 = match (list1, list2) with
+    let rec cmp' list1 list2 = match (list1, list2) with
         | [], []                -> 0
         | list1, list2          -> begin
             if car list1 > car list2 then 1
             else if car list1 < car list2 then -1
-            else compareTo' (cdr list1) (cdr list2)
+            else cmp' (cdr list1) (cdr list2)
         end
 
     (**Similar to Java method returns:
         -   1   if value1 > value2
         - (-1)  if value1 < value2
         -   0   if value1 = value2*)
-    let compareTo value1 value2 = 
+    let cmp value1 value2 = 
         let list_int1 = reverse (trimzeros value1)  
         in let list_int2 = reverse (trimzeros value2)
         in if List.length list_int1 > List.length list_int2
         then 1
         else if  List.length list_int1 < List.length list_int2
             then -1
-            else compareTo' list_int1 list_int2;;
+            else cmp' list_int1 list_int2;;
 
 
     let rec to_string_helper reversed_list = 
@@ -167,11 +167,18 @@ module Bigint = struct
           in add' single (mul' rem cdr2) 0
         end;;
 
+    let rec div' list1 list2  = 
+        if cmp list1 list2 = 1
+        then let nxt = sub' list1 list2 false
+        in add' [1] (div' nxt list2 ) 0
+        else [] 
+        ;;
+
 
     let sub (Bigint (neg1, value1)) (Bigint (neg2, value2)) =
         if neg1 <> neg2     (* Addition *)
         then Bigint (neg1, add' value1 value2 0)
-        else let cmp = compareTo value1 value2 in
+        else let cmp = cmp value1 value2 in
             if cmp = 1 then Bigint (neg1, sub' value1 value2 false)
             else if cmp = -1 then   (* Sign is flipped*)
                 Bigint (flip_sign neg2, sub' value2 value1 false)
@@ -191,11 +198,30 @@ module Bigint = struct
         then Bigint (Pos, mul' value1 value2)
         else Bigint (Neg, mul' value1 value2)
 
-    let div = add
+    let div = add (* (Bigint (neg1, value1)) (Bigint (neg2, value2)) =
+        if value1 = [] || value2 = []
+        then zero
+        else if neg1 = neg2
+        then Bigint (Pos, div' value1 value2)
+        else Bigint (Neg, mul' value1 value2)  *)
 
     let rem = add
 
-    let pow = add
+    let rec pow' value1 value2 counter = 
+        if cmp value2 counter = -1 then [1]
+        else if cmp value2 counter = 0 then value1
+        else let curr = mul' value1 value1
+        in let new_counter = add' counter [2] 0 
+        in mul' curr (pow' value1 value2 new_counter)  
+        
+        
+
+    let pow (Bigint (neg1, value1)) (Bigint (neg2, value2)) =
+        if value1 = [] || neg2 = Neg
+        then zero
+        else if value2 = []
+        then Bigint (Pos, [1])
+        else  Bigint (Pos, pow' value1 value2 [1] )     (* Counter starts at 0*)
 
     
 
