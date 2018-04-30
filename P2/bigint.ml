@@ -1,4 +1,7 @@
 (* $Id: bigint.ml,v 1.5 2014-11-11 15:06:24-08 - - $ *)
+(**
+    Author: Cesar Neri       ID: 1513805      email:ceneri@ucsc.edu
+*)
 
 open Printf
 
@@ -39,6 +42,8 @@ module Bigint = struct
                      else Bigint (Pos, to_intlist 0)
 
 
+    (*****************Helper methods**********)
+
     (*!! https://ocaml.org/learn/tutorials/99problems.html*)
     let rec fold_until f acc n = function
         | [] -> (acc, [])
@@ -47,18 +52,37 @@ module Bigint = struct
   
     let slice list i k =
         let _, list = fold_until (fun _ _ -> []) [] i list in
-        let taken, _ = fold_until (fun acc h -> h :: acc) [] (k - i + 1) list in
+        let taken, _ = fold_until (fun acc h -> h :: acc) [] 
+            (k - i + 1) list in
         List.rev taken;;
 
     (*!! https://ocaml.org/learn/tutorials/99problems.html*)
     let rec insert_at x n = function
         | [] -> [x]
-        | h :: t as l -> if n = 0 then x :: l else h :: insert_at x (n-1) t;;
+        | h :: t as l -> if n = 0 then x :: l 
+            else h :: insert_at x (n-1) t;;
 
+    let rec to_string_helper reversed_list = 
+        let len = List.length reversed_list
+        in if len < 71
+        then (map string_of_int reversed_list)
+        else begin
+            let l1 = map string_of_int (slice reversed_list 0 68)
+            in let l2 = slice reversed_list 69 len
+                in (l1)@["\\"]@["\n"]@(to_string_helper l2)
+        end
 
+    let string_of_bigint (Bigint (sign, value)) =
+        match value with
+        | []    -> "0"
+        | value -> let reversed = reverse value
+                   in  strcat ""
+                       ((if sign = Pos then "" else "-") ::
+                        (to_string_helper reversed))
+
+    (*Multiplys a list number by 10*)
     let rec timesTen list1 =
         insert_at 0 0 list1
-
 
     let trimzeros list =
         let rec trimzeros' list' = match list' with
@@ -71,12 +95,9 @@ module Bigint = struct
                         | car, cdr'   ->  car::cdr'
         in trimzeros' list
 
-    (*Helper methods*)
-
     let flip_sign sign = match sign with
         | Pos -> Neg
         | Neg -> Pos
-
 
     let rec cmp' list1 list2 = match (list1, list2) with
         | [], []                -> 0
@@ -98,27 +119,7 @@ module Bigint = struct
         else if  List.length list_int1 < List.length list_int2
             then -1
             else cmp' list_int1 list_int2;;
-
-
-    let rec to_string_helper reversed_list = 
-        let len = List.length reversed_list
-        in if len < 71
-        then (map string_of_int reversed_list)
-        else begin
-            let l1 = map string_of_int (slice reversed_list 0 68)
-            in let l2 = slice reversed_list 69 len
-                in (l1)@["\\"]@["\n"]@(to_string_helper l2)
-
-        end
-
-    let string_of_bigint (Bigint (sign, value)) =
-        match value with
-        | []    -> "0"
-        | value -> let reversed = reverse value
-                   in  strcat ""
-                       ((if sign = Pos then "" else "-") ::
-                        (to_string_helper reversed))
-
+    
 
     let rec add' list1 list2 carry = match (list1, list2, carry) with
         | list1, [], 0       -> list1
@@ -143,20 +144,23 @@ module Bigint = struct
         | car1::cdr1, car2::cdr2, true  ->  begin
           if (car1 - 1) > car2 then let subs = (car1 - 1) - car2
           in subs :: sub' cdr1 cdr2 false
-          else if (car1 - 1) < car2 then let subs = (car1 -1 + 10) - car2
+          else if (car1 - 1) < car2 then let subs = 
+            (car1 -1 + 10) - car2
           in subs :: sub' cdr1 cdr2 true
           else 0 :: sub' cdr1 cdr2 false
         end 
         | _, _, _  -> [0];;
 
-    let rec single_mul list1 digit carry = match (list1, digit, carry) with
-        | list1, 0, 0                       -> []
-        | [], digit, 0                      -> []
-        | [], digit, carry                  -> [carry]
-        | car1::cdr1, digit, carry          -> begin
-          let sum = (car1 * digit) + carry
-          in sum mod radix :: single_mul cdr1 digit (sum / radix)          
-        end;;
+    (* Multiplies a number by a single digit number *)
+    let rec single_mul list1 digit carry = 
+        match (list1, digit, carry) with
+            | list1, 0, 0                       -> []
+            | [], digit, 0                      -> []
+            | [], digit, carry                  -> [carry]
+            | car1::cdr1, digit, carry          -> begin
+              let sum = (car1 * digit) + carry
+              in sum mod radix :: single_mul cdr1 digit (sum / radix)
+            end;;
 
     let rec mul' list1 list2  = match (list1, list2) with
         | list1, []                 -> []
@@ -167,6 +171,7 @@ module Bigint = struct
           in add' single (mul' rem cdr2) 0
         end;;
 
+    (*Multiplys a list number by 2*)
     let double_val list = 
         mul' list [2]
 
@@ -174,26 +179,31 @@ module Bigint = struct
         if (cmp divisor dividend) = 1
         then [0], dividend
         else let quotient, remainder =
-                div_and_rem' (dividend, double_val divisor, double_val pow2)
-            in  if (cmp remainder divisor) = -1
-            then quotient, remainder
-            else (add' quotient pow2 0),
-                  (sub' remainder divisor false)
+          div_and_rem' (dividend, double_val divisor, double_val pow2)
+          in  if (cmp remainder divisor) = -1
+          then quotient, remainder
+          else (add' quotient pow2 0),
+            (sub' remainder divisor false)
 
     (*Returns tuple for both quotient and the remainder *)
-    let div_and_rem (dividend, divisor) = div_and_rem' (dividend, divisor, [1])
+    let div_and_rem (dividend, divisor) = 
+        div_and_rem' (dividend, divisor, [1])
 
     let div_helper value1 value2 =
         let quotient, remainder = div_and_rem (value1, value2)
         in quotient
 
-    (*Same as div_helper but raeturn remainder not quotient*)
+    (*Same as div_helper but return remainder not quotient*)
     let rem_helper value1 value2 =
         let quotient, remainder = div_and_rem (value1, value2)
         in remainder
-    
-    
 
+    let rec pow' value1 value2 counter = 
+        if cmp value2 counter = -1 then [1]
+        else if cmp value2 counter = 0 then value1
+        else let curr = mul' value1 value1
+        in let new_counter = add' counter [2] 0 
+        in mul' curr (pow' value1 value2 new_counter)
     
     let sub (Bigint (neg1, value1)) (Bigint (neg2, value2)) =
         if neg1 <> neg2     (* Addition *)
@@ -207,10 +217,11 @@ module Bigint = struct
     let add (Bigint (neg1, value1)) (Bigint (neg2, value2)) =
         if neg1 = neg2
         then Bigint (neg1, add' value1 value2 0)
-        else sub (Bigint (neg1, value1)) (Bigint (flip_sign neg2, value2)) 
-        (* Should become substarction, sign is flipped, sub will flip it back*)
-
-   
+        else sub (Bigint (neg1, value1)) 
+                 (Bigint (flip_sign neg2, value2)) 
+        (* Should become substraction, sign is flipped
+           sub will flip it back*)
+ 
     let mul (Bigint (neg1, value1)) (Bigint (neg2, value2)) =
         if value1 = [] || value2 = []
         then zero
@@ -236,20 +247,12 @@ module Bigint = struct
         then Bigint (Pos, trimzeros( rem_helper value1 value2 ))
         else Bigint (Neg, trimzeros( rem_helper value1 value2 ))
 
-    let rec pow' value1 value2 counter = 
-        if cmp value2 counter = -1 then [1]
-        else if cmp value2 counter = 0 then value1
-        else let curr = mul' value1 value1
-        in let new_counter = add' counter [2] 0 
-        in mul' curr (pow' value1 value2 new_counter)  
-              
-
     let pow (Bigint (neg1, value1)) (Bigint (neg2, value2)) =
         if value1 = [] || neg2 = Neg
         then zero
         else if value2 = []
         then Bigint (Pos, [1])
-        else  Bigint (Pos, pow' value1 value2 [1] )     (* Counter starts at 0*)
-
-    
+        else  Bigint (Pos, pow' value1 value2 [1] )     
+                (* Counter starts at 0*)
+   
 end

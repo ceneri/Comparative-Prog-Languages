@@ -1,4 +1,7 @@
 (* $Id: bigint.mli,v 1.1 2011-04-26 13:39:18-07 - - $ *)
+(**
+    Author: Cesar Neri       ID: 1513805      email:ceneri@ucsc.edu
+*)
 
 module Bigint : sig
    type bigint

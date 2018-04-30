@@ -1,1 +1,13 @@
-gmake: Nothing to be done for 'all'.
+make --no-print-directory deps
+ocamldep bigint.mli bigint.ml maindc.ml scanner.mll >Makefile.deps
+checksource bigint.mli
+ocamlc -c bigint.mli
+checksource scanner.mll
+ocamllex scanner.mll
+6 states, 267 transitions, table size 1104 bytes
+ocamlc -c scanner.ml
+checksource bigint.ml
+ocamlc -c bigint.ml
+checksource maindc.ml
+ocamlc -c maindc.ml
+ocamlc bigint.cmo scanner.cmo maindc.cmo -o ocamldc

@@ -1,0 +1,12 @@
+Cesar Neri
+ceneri@ucsc.edu  1513805
+
+Spring 2018
+Program 2: ocamldc (Desk Calculator)
+Files: Makefile, bigint.ml, bigint.mli, maindc.ml, and scanner.mll
+
+Sources of Used:
+- Inserting element at specific index:
+    https://ocaml.org/learn/tutorials/99problems.html
+- Slicing a list:
+    https://ocaml.org/learn/tutorials/99problems.html

@@ -1,4 +1,4 @@
-# 3 "scanner.mll"
+# 6 "scanner.mll"
  
 
 module Scanner = struct
@@ -115,22 +115,22 @@ let rec scanner lexbuf =
 and __ocaml_lex_scanner_rec lexbuf __ocaml_lex_state =
   match Lexing.engine __ocaml_lex_tables __ocaml_lex_state lexbuf with
       | 0 ->
-# 27 "scanner.mll"
+# 30 "scanner.mll"
                ( Number (bigstr (lexeme lexbuf)) )
 # 121 "scanner.ml"
 
   | 1 ->
-# 28 "scanner.mll"
+# 31 "scanner.mll"
                ( regoper lexbuf )
 # 126 "scanner.ml"
 
   | 2 ->
-# 29 "scanner.mll"
+# 32 "scanner.mll"
                ( Operator (lexeme lexbuf).[0] )
 # 131 "scanner.ml"
 
   | 3 ->
-# 30 "scanner.mll"
+# 33 "scanner.mll"
                ( raise End_of_file )
 # 136 "scanner.ml"
 
@@ -139,7 +139,7 @@ and __ocaml_lex_scanner_rec lexbuf __ocaml_lex_state =
 
 ;;
 
-# 32 "scanner.mll"
+# 35 "scanner.mll"
  
 
 end

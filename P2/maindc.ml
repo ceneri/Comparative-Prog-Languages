@@ -1,4 +1,7 @@
 (* $Id: maindc.ml,v 1.5 2017-04-07 13:24:41-07 - - $ *)
+(**
+    Author: Cesar Neri       ID: 1513805      email:ceneri@ucsc.edu
+*)
 
 include Scanner
 include Bigint
