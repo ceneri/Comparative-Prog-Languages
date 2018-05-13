@@ -1,0 +1,7 @@
+Object: SortedCollection new: 16 "<0x7f80cdbd1470>" error: Invalid index 1: index out of range
+SystemExceptions.IndexOutOfRange(Exception)>>signal (ExcHandling.st:254)
+SystemExceptions.IndexOutOfRange class>>signalOn:withIndex: (SysExcept.st:660)
+SortedCollection(OrderedCollection)>>first (OrderColl.st:78)
+optimized [] in UndefinedObject>>executeStatements (hzip.st:243)
+True>>ifTrue: (True.st:64)
+UndefinedObject>>executeStatements (hzip.st:241)
