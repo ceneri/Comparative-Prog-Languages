@@ -198,24 +198,26 @@ true ifTrue:[
             nxtchar := infile next asInteger.
             freqTable incr: nxtchar.
         ].
-        nxtchar = nil ifFalse: [
-            freqTable incr: 256.
-        ].
         infile close.
     ] on: SystemExceptions.FileError do: [:signal |
     |errno|
     errno := File errno.
+    stdout << 'ERROR' << nl.
     stdout flush.
     stderr << execname << ': ' << filenameOut << ': '
           << signal messageText << nl.
     stderr flush.
     ].
+
+    "Add EOF"
+    freqTable incr: 256.
+    stdout flush.
 ].
 
 "Generate all leaf nodes, and add them to Priority Queue"
 t ifTrue:[
     freqTable keysAndValuesDo: [:key :value |
-        (value notNil) ifTrue:[
+        (value notNil and: [value > 0]) ifTrue:[
             |char countval lNode|
             char := key asCharacter.
             countval := value.
@@ -253,33 +255,34 @@ t ifTrue: [
 
 "Print encodifg table"
 true ifTrue: [
-
     newEncoding keysAndValuesDo: [:key :value |
         (value notNil and: [value > 0]) ifTrue: [
             |character reps|
             (key asCharacter isPrint) 
             ifTrue: [ 
                 character := (key asCharacter visible).
-                character asString size to: 1 do: [:skip| stdout << ' '].
-                stdout << character << '  '. ]
+                "character asString size to: 3 do: [:skip| stdout]."
+                stdout << ' ' << character << ' '. ]
             ifFalse: [
                 (key = 256)
-                ifTrue: [ stdout << 'EOF' << ' '.]
+                ifTrue: [ stdout << 'EOF'.]
                 ifFalse: [
                     character := (key asCharacter visible).
                     (character size > 4) 
                     ifTrue: [
-                        character := 'x',  (character subStrings: '16r') first.
-                        stdout << character << ' '. ]
+                        character := 'x',  (character copyFrom: 4).
+                        stdout << character. ]
                     ifFalse: [
-                        character := 'x0',  (character subStrings: '16r') first.
-                        stdout << character << ' '. ] 
-                    ].
+                        character := 'x0',  (character copyFrom: 4).    
+                        stdout << character. ]. 
+                ].
             ].
-             
+
+            "Print repetitions" 
             reps := (freqTable at: key).
-            reps asString size to: 6 do: [:skip| stdout << ' '].
-            stdout << reps << '  '.
+            reps asString size to: 5 do: [:skip| stdout << ' '].
+            stdout << reps << ' '.
+            "Print binary code"
             stdout << value << nl.
         ].
     ].
