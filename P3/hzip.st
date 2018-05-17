@@ -103,6 +103,26 @@ Object subclass: Leaf [
       visitor value: char value: string.
    ]
 
+   postorderwrite: outputFile [
+   "for each leaf, write out a 0 bit, followed by the 8 bits of
+    the corresponding byte. Write out the bits in the order bit 7, bit 6, . . ., bit 0,
+    that is high bit first."
+    |indexChar bit|
+    indexChar := 8.
+    [indexChar > 0] whileTrue: [
+      bit := char value bitAt: indexChar.
+      outputFile writeBit: bit.
+      indexChar := indexChar - 1.
+    ].
+    "As a special case, if the byte is 0, write out bit 8, which
+    will be a 0 for a byte value of 0, and 1 for a byte value of 256 (the EOF
+    marker)."
+    (char value = 0) 
+    ifTrue: [outputFile writeBit: (0 bitAt: 1).].
+    (char value = 256) 
+    ifTrue: [outputFile writeBit: (1 bitAt: 1).].
+  ]
+
 ]
 
 
@@ -132,6 +152,13 @@ Leaf subclass: Tree [
    inorder: visitor prefix: string [
       left inorder: visitor prefix: string, '0'.
       right inorder: visitor prefix: string, '1'.
+   ]
+
+   postorderwrite: outputFile [
+      left  postorderwrite: outputFile.
+      right  postorderwrite: outputFile.
+      "For each interior node, write out a 1 bit."
+      outputFile writeBit: (1 bitAt: 1).
    ]
 
 ]
@@ -165,6 +192,38 @@ Object subclass: BitStream [
    ]
 ]
 
+Object subclass: OutBits [
+   |bitIndex currentByte myStream|
+   OutBits class >> new [
+      self shouldNotImplement.
+   ]
+   OutBits class >> new: fileStream [
+      |result|
+      result := super new.
+      result init: fileStream.
+      ^result
+   ]
+   clearByte [
+      bitIndex := 8.
+      currentByte := 0.
+   ]
+   init: fileStream [
+      myStream := fileStream.
+      self clearByte.
+   ]
+   flushByte [
+      bitIndex = 8 ifFalse: [
+         myStream nextPutByte: currentByte.
+         self clearByte.
+      ]
+   ]
+   writeBit: bit [
+      currentByte := currentByte bitAt: bitIndex put: bit.
+      bitIndex := bitIndex - 1.
+      bitIndex = 0 ifTrue: [self flushByte].
+   ]
+]
+
 "**************MAIN***************************"
 
 "Arguments passed"
@@ -189,6 +248,7 @@ newEncoding := ZeroArray new: 257.
 pQueue := SortedCollection new.
 
 fileIn := (Smalltalk getArgv: 2).
+fileOut := (Smalltalk getArgv: 3).
 
 "Create a new ZeroArray and count the frequency of characters."
 true ifTrue:[
@@ -215,7 +275,7 @@ true ifTrue:[
 ].
 
 "Generate all leaf nodes, and add them to Priority Queue"
-t ifTrue:[
+c | t ifTrue:[
     freqTable keysAndValuesDo: [:key :value |
         (value notNil and: [value > 0]) ifTrue:[
             |char countval lNode|
@@ -245,7 +305,7 @@ d ifTrue: [
 ]. 
 
 "Generate new encoding list"
-t ifTrue: [ 
+c | t ifTrue: [ 
     | huffmanTree |
     huffmanTree := pQueue first.
     huffmanTree inorder: [:char :string |
@@ -296,4 +356,46 @@ d ifTrue: [
     "Tree itself"
     stdout << pQueue first << nl.
 
+].
+
+"Compress"
+true ifTrue: [
+  | huffmanTree outputFile outBytes inFile nxtChar nxtCode|
+  huffmanTree := pQueue first.
+  (fileOut = nil)
+  ifTrue: [
+    outputFile := stdout.
+  ]
+  ifFalse: [
+    outputFile := FileStream open: fileOut mode: FileStream write.
+    "stdout << fileOut << nl."
+  ].
+  outBytes := OutBits new: outputFile.
+  huffmanTree postorderwrite: outBytes. 
+  "When the tree is completely written out, write another 1 bit to 
+  indicate the end of the tree"
+  outBytes writeBit: (1 bitAt: 1).
+  outBytes flushByte.
+
+  "Reopen the input file and write out the encoded version of each byte. "
+  inFile := FileStream open: fileIn mode: FileStream read.
+  [inFile atEnd not] whileTrue: [
+          nxtChar := inFile next asInteger.
+          nxtCode := newEncoding at: nxtChar.
+          nxtCode do: [:digitChar |
+            outBytes writeBit: (digitChar value bitAt: 1). "0 or 1"
+          ].
+  ].
+  "At end of the buffer, write out the encoding string for EOF. Then pad 
+   with 0 bits out to a byte boundary, if needed."
+  nxtCode := newEncoding at: 256.
+  nxtCode do: [:digitChar |
+    outBytes writeBit: (digitChar value bitAt: 1). "0 or 1"
+  ].
+  outBytes flushByte.
+
+  "!!Make sure it padds extra 0 to byte"
+
+  inFile close.
+  outputFile close.
 ].
